@@ -1,2 +1,2 @@
 # Proyecto-Practico
-Este es el proyecto de fundamentos de programación.
+Porfavor avisarme de los cambios en los forks
