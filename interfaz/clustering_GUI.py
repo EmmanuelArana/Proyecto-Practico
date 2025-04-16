@@ -1,20 +1,16 @@
 import tkinter as tk
 from tkinter import messagebox
-from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import random
-import pandas as pd
-
-#Clustering
+from clustering import ClusteringModel
 
 class ClusteringApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Clustering Demo")
         self.root.geometry("250x300")
-
-        self.data = []
+        self.model = ClusteringModel()
 
         coord_frame = tk.Frame(root, bg="#FFFFFF", padx=10, pady=10)
         coord_frame.grid(row=0, column=0, columnspan=2, pady=10)
@@ -27,8 +23,7 @@ class ClusteringApp:
         self.y_entry = tk.Entry(coord_frame)
         self.y_entry.grid(row=1, column=1)
 
-        tk.Button(coord_frame, text="Agregar Datos", command=self.agregar_datos).grid(row=2, column=0, columnspan=2,
-                                                                                      pady=5)
+        tk.Button(coord_frame, text="Agregar Datos", command=self.agregar_datos).grid(row=2, column=0, columnspan=2, pady=5)
 
         tk.Label(root, text="Número de Clusters:").grid(row=1, column=0)
         self.k_entry = tk.Entry(root)
@@ -41,7 +36,7 @@ class ClusteringApp:
         try:
             x = float(self.x_entry.get())
             y = float(self.y_entry.get())
-            self.data.append([x, y])
+            self.model.agregar_datos(x, y)
             self.x_entry.delete(0, tk.END)
             self.y_entry.delete(0, tk.END)
             messagebox.showinfo("Datos agregados", f"Datos ({x}, {y}) agregados correctamente.")
@@ -49,23 +44,9 @@ class ClusteringApp:
             messagebox.showerror("Error", "Por favor, introduce datos numéricos.")
 
     def hacer_clustering(self):
-        if len(self.data) < 2:
-            messagebox.showerror("Error", "Debes ingresar al menos dos datos numericos.")
-            return
-
         try:
             k = int(self.k_entry.get())
-            if k <= 0 or k > len(self.data):
-                raise ValueError
-
-            #Resultado de los datos
-
-            kmeans = KMeans(n_clusters=k)
-            kmeans.fit(self.data)
-            labels = kmeans.labels_
-            centroids = kmeans.cluster_centers_
-            inercia = kmeans.inertia_
-
+            labels, centroids, inercia = self.model.hacer_clustering(k)
             messagebox.showinfo("Inercia", f"Inercia del modelo: {inercia:.2f}")
 
             color_list = list(mcolors.TABLEAU_COLORS.values())
@@ -73,7 +54,7 @@ class ClusteringApp:
 
             plt.figure()
             for i in range(k):
-                cluster = [self.data[j] for j in range(len(self.data)) if labels[j] == i]
+                cluster = [self.model.data[j] for j in range(len(self.model.data)) if labels[j] == i]
                 x_vals = [point[0] for point in cluster]
                 y_vals = [point[1] for point in cluster]
                 color = color_list[i % len(color_list)]
@@ -87,17 +68,11 @@ class ClusteringApp:
             plt.grid(True)
             plt.show()
 
-        except ValueError:
-            messagebox.showerror("Error", "Introduce un número válido de clusters.")
-
-    def obtener_dataframe(self):
-        if not self.data:
-            messagebox.showinfo("Sin datos", "No hay datos ingresados.")
-            return None
-        return pd.DataFrame(self.data, columns=['Saldo', 'Movimientos'])
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
 
     def mostrar_dataframe(self):
-        df = self.obtener_dataframe()
+        df = self.model.obtener_dataframe()
         if df is not None:
             ventana = tk.Toplevel(self.root)
             ventana.title("Datos Ingresados")
