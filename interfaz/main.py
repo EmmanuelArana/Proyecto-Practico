@@ -1,14 +1,15 @@
 import tkinter as tk
-from tkinter import messagebox
-from logical_regresion import LogisticRegressionModel  # Importe directo
-from clustering_GUI import ClusteringApp
-import matplotlib.pyplot as plt
-import tkinter as tk
 from tkinter import filedialog, messagebox
+
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LinearRegression
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg  # Incluir Matplotlib en Tkinter
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+
+from clustering_GUI import ClusteringApp
 
 
 def iniciar_menu():
@@ -158,88 +159,148 @@ def iniciar_menu():
 
 
     def algoritmo2():
-            new_window = tk.Toplevel(root)
-            new_window.title("Algoritmo 2 - Regresión Logística")
-            new_window.geometry("600x400")
-            new_window.configure(bg='#e6f7ff')
+        new_window = tk.Toplevel(root)
+        new_window.title("Algoritmo 2 - Regresión Logística")
+        new_window.geometry("700x600")
+        new_window.configure(bg='#e6f7ff')
 
-            titulo = tk.Label(new_window, text="Regresión Logística", font=("Helvetica", 18), bg='#e6f7ff', fg='black')
-            titulo.pack(pady=20)
+        titulo = tk.Label(new_window, text="Regresión Logística", font=("Helvetica", 18), bg='#e6f7ff', fg='black')
+        titulo.pack(pady=20)
 
-            descripcion = tk.Label(new_window, text="Digite los datos para continuar", font=("Helvetica", 12), bg='#e6f7ff', fg='black')
-            descripcion.pack(pady=10)
+        descripcion = tk.Label(new_window, text="Cargue un archivo CSV o ingrese valores manualmente", font=("Helvetica", 12), bg='#e6f7ff', fg='black')
+        descripcion.pack(pady=10)
 
-            coord_frame = tk.Frame(new_window, bg="#e6f7ff", padx=10, pady=10)
-            coord_frame.pack(pady=10)
+        model = None
+        scaler = None
+        data = None
 
-            tk.Label(coord_frame, text="Saldo:", bg="#e6f7ff").grid(row=0, column=0)
-            x_entry = tk.Entry(coord_frame)
-            x_entry.grid(row=0, column=1)
+        resultado_text = tk.Text(new_window, height=6, width=70)
+        resultado_text.pack(pady=10)
 
-            tk.Label(coord_frame, text="Movimientos:", bg="#e6f7ff").grid(row=1, column=0)
-            y_entry = tk.Entry(coord_frame)
-            y_entry.grid(row=1, column=1)
+        input_frame = tk.Frame(new_window, bg="#e6f7ff")
+        input_frame.pack(pady=10)
 
-            tk.Label(coord_frame, text="Etiqueta (0 o 1):", bg="#e6f7ff").grid(row=2, column=0)
-            label_entry = tk.Entry(coord_frame)
-            label_entry.grid(row=2, column=1)
+        tk.Label(input_frame, text="Edad:", bg="#e6f7ff").grid(row=0, column=0, sticky="e")
+        edad_entry = tk.Entry(input_frame)
+        edad_entry.grid(row=0, column=1)
 
-            model = LogisticRegressionModel()
+        tk.Label(input_frame, text="Salario estimado:", bg="#e6f7ff").grid(row=1, column=0, sticky="e")
+        salario_entry = tk.Entry(input_frame)
+        salario_entry.grid(row=1, column=1)
 
-            def agregar_datos():
+        def cargar_csv():
+            nonlocal data
+            file_path = filedialog.askopenfilename(title="Selecciona un archivo CSV", filetypes=[("CSV files", "*.csv")])
+            if file_path:
                 try:
-                    x = float(x_entry.get())
-                    y = float(y_entry.get())
-                    label = int(label_entry.get())
-                    if label not in [0, 1]:
-                        messagebox.showerror("Error", "La etiqueta debe ser 0 o 1.")
+                    data = pd.read_csv(file_path)
+                    columnas = list(data.columns)
+                    if not {"Age", "EstimatedSalary", "Purchased"}.issubset(set(columnas)):
+                        messagebox.showerror("Error", "El CSV debe contener las columnas 'Age', 'EstimatedSalary' y 'Purchased'")
                         return
-                    model.agregar_datos(x, y, label)
-                    x_entry.delete(0, tk.END)
-                    y_entry.delete(0, tk.END)
-                    label_entry.delete(0, tk.END)
-                    messagebox.showinfo("Datos agregados", f"({x}, {y}, {label}) agregado.")
-                except ValueError:
-                    messagebox.showerror("Error", "Por favor ingresa valores válidos.")
+                    resultado_text.delete("1.0", tk.END)
+                    resultado_text.insert(tk.END, f"Archivo cargado: {file_path}\n\n")
+                    resultado_text.insert(tk.END, f"{data.head()}\n")
+                except Exception as e:
+                    messagebox.showerror("Error", f"No se pudo leer el archivo:\n{e}")
+            else:
+                messagebox.showinfo("Cancelado", "No se seleccionó ningún archivo.")
 
-            def entrenar_modelo():
-                try:
-                    model.entrenar_modelo()
-                    messagebox.showinfo("Modelo entrenado", "El modelo ha sido entrenado exitosamente.")
-                except ValueError as e:
-                    messagebox.showerror("Error", str(e))
+        def entrenar_modelo():
+            nonlocal model, data, scaler
+            if data is None:
+                messagebox.showerror("Error", "Primero debe cargar un archivo CSV.")
+                return
+            try:
+                X = data[["Age", "EstimatedSalary"]]
+                y = data["Purchased"]
 
-            def predecir_etiqueta():
-                try:
-                    x = float(x_entry.get())
-                    y = float(y_entry.get())
-                    prediccion = model.predecir_etiqueta(x, y)
-                    messagebox.showinfo("Predicción", f"La etiqueta predicha para ({x}, {y}) es: {prediccion}")
-                except ValueError:
-                    messagebox.showerror("Error", "Por favor ingresa valores válidos para la predicción.")
+                scaler = StandardScaler()
+                X_scaled = scaler.fit_transform(X)
 
-            def mostrar_grafico():
-                df = model.obtener_dataframe()
-                if df is not None:
-                    plt.figure()
-                    for label in df['Etiqueta'].unique():
-                        subset = df[df['Etiqueta'] == label]
-                        plt.scatter(subset['Saldo'], subset['Movimientos'], label=f"Etiqueta {label}")
-                    plt.xlabel("Saldo")
-                    plt.ylabel("Movimientos")
-                    plt.legend()
-                    plt.title("Datos de Regresión Logística")
-                    plt.grid(True)
-                    plt.show()
+                model = LogisticRegression(solver="liblinear", class_weight='balanced')
+                model.fit(X_scaled, y)
 
-            tk.Button(coord_frame, text="Agregar Datos", command=agregar_datos).grid(row=3, column=0, columnspan=2, pady=5)
-            tk.Button(new_window, text="Entrenar Regresión Logística", command=entrenar_modelo, width=30).pack(pady=10)
-            tk.Button(new_window, text="Predecir Etiqueta", command=predecir_etiqueta, width=30).pack(pady=5)
-            tk.Button(new_window, text="Mostrar Gráfico", command=mostrar_grafico, width=30).pack(pady=10)
+                # Métricas de desempeño (opcional)
+                y_pred = model.predict(X_scaled)
+                print(classification_report(y, y_pred))
 
-            boton_regresar = tk.Button(new_window, text="Volver al Menú Principal", command=new_window.destroy, bg='#ff3300', fg='black', width=20, height=2)
-            boton_regresar.pack(pady=20)
-#trabajar aqui 
+                messagebox.showinfo("Éxito", "Modelo entrenado correctamente.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al entrenar el modelo:\n{e}")
+
+        def predecir():
+            nonlocal model, scaler
+            if model is None or scaler is None:
+                messagebox.showerror("Error", "Primero debes entrenar el modelo.")
+                return
+            try:
+                edad = float(edad_entry.get())
+                salario = float(salario_entry.get())
+
+                X_new = scaler.transform([[edad, salario]])
+                pred = model.predict(X_new)[0]
+
+                resultado_text.delete("1.0", tk.END)
+                resultado_text.insert(tk.END, f"\n🔍 Predicción para Edad={edad}, Salario={salario} ➤ {'🟢 Comprará (1)' if pred == 1 else '🔴 No comprará (0)'}\n")
+
+                # Mostrar en gráfico
+                fig_window = tk.Toplevel(new_window)
+                fig_window.title("Gráfico con Predicción")
+                fig_window.geometry("800x700")
+
+                fig, ax = plt.subplots(figsize=(6, 4))
+                for etiqueta in data["Purchased"].unique():
+                    subset = data[data["Purchased"] == etiqueta]
+                    ax.scatter(subset["Age"], subset["EstimatedSalary"], label=f"Clase {etiqueta}", alpha=0.7)
+
+                ax.scatter(edad, salario, color="red", s=100, label="Predicción", edgecolors="black", zorder=10)
+                ax.set_xlabel("Edad")
+                ax.set_ylabel("Salario Estimado")
+                ax.set_title("Visualización de Datos y Predicción")
+                ax.legend()
+                ax.grid(True)
+
+                canvas = FigureCanvasTkAgg(fig, master=fig_window)
+                canvas.draw()
+                canvas.get_tk_widget().pack(pady=20)
+
+            except ValueError:
+                messagebox.showerror("Error", "Por favor, ingresa valores válidos para Edad y Salario.")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        def mostrar_grafico():
+            nonlocal data
+            if data is None:
+                messagebox.showerror("Error", "Primero debe cargar un archivo CSV.")
+                return
+            fig_window = tk.Toplevel(new_window)
+            fig_window.title("Gráfico de Regresión Logística")
+            fig_window.geometry("800x700")
+            fig, ax = plt.subplots(figsize=(6, 4))
+            for etiqueta in data["Purchased"].unique():
+                subset = data[data["Purchased"] == etiqueta]
+                ax.scatter(subset["Age"], subset["EstimatedSalary"], label=f"Clase {etiqueta}", alpha=0.7)
+
+            ax.set_xlabel("Edad")
+            ax.set_ylabel("Salario Estimado")
+            ax.set_title("Visualización de Datos")
+            ax.legend()
+            ax.grid(True)
+
+            canvas = FigureCanvasTkAgg(fig, master=fig_window)
+            canvas.draw()
+            canvas.get_tk_widget().pack(pady=20)
+
+        # Botones
+        tk.Button(new_window, text="Cargar CSV", command=cargar_csv, width=25, bg='#ff9900').pack(pady=5)
+        tk.Button(new_window, text="Entrenar Modelo", command=entrenar_modelo, width=25, bg='#00cc00').pack(pady=5)
+        tk.Button(new_window, text="Predecir", command=predecir, width=25, bg='#0066ff').pack(pady=5)
+        tk.Button(new_window, text="Mostrar Gráfico", command=mostrar_grafico, width=25, bg='#9900cc', fg='white').pack(pady=5)
+
+#Clustering
+
     def algoritmo3():
         new_window = tk.Toplevel(root)
         new_window.title("Algoritmo 3 - Clustering")
