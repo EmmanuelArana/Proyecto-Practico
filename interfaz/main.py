@@ -328,7 +328,7 @@ def iniciar_menu():
     root.grid_columnconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
 
-    titulo = tk.Label(root, text="Inicio", font=("Helvetica", 24), bg='#1a1a4b', fg='white')
+    titulo = tk.Label(root, text="Bienvenido al programa, elija un opcion", font=("Arial", 34), bg='#1a1a4b', fg='white')
     titulo.grid(row=0, column=0, columnspan=2, pady=20, sticky="nsew")
 
     frame = tk.Frame(root, bg='#1a1a4b')
@@ -341,13 +341,13 @@ def iniciar_menu():
     frame.grid_columnconfigure(1, weight=1)
 
     # Botones dentro del marco
-    boton1 = tk.Button(frame, text="Algoritmo 1", command=algoritmo1, bg='#0099cc', fg='black')
+    boton1 = tk.Button(frame, text="Regresión Linear", command=algoritmo1, bg='#0099cc', fg='black')
     boton1.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
-    boton2 = tk.Button(frame, text="Algoritmo 2", command=algoritmo2, bg='#663399', fg='black')
+    boton2 = tk.Button(frame, text="Regresión Logistica", command=algoritmo2, bg='#663399', fg='black')
     boton2.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
 
-    boton3 = tk.Button(frame, text="Algoritmo 3", command=algoritmo3, bg='#ffcc00', fg='black')
+    boton3 = tk.Button(frame, text="Clustering", command=algoritmo3, bg='#ffcc00', fg='black')
     boton3.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
     boton4 = tk.Button(frame, text="Salir", command=salir, bg='#ff3300', fg='black')
